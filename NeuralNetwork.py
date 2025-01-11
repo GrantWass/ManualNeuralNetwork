@@ -1,3 +1,7 @@
+import numpy as np
+from sklearn.datasets import load_iris
+import pandas as pd
+
 def back_propagation(model, gradients, learning_rate):
     """
     Perform backpropagation to adjust the model's weights and biases.
@@ -179,6 +183,9 @@ def main():
     target_array = None
     epochs = 100
     learning_rate = 0.01
+
+    # Load and preprocess data
+    iris = load_iris()
     
     # Train the model
     train(model, input_array, target_array, epochs, learning_rate)
