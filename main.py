@@ -1,4 +1,4 @@
-from model import initialize_model, predict
+from model import init_model, predict
 from train_test import train, test
 from utils import normalize_data, split_data
 from sklearn.datasets import load_iris
@@ -21,14 +21,14 @@ def main():
 
     # Initialize the model
     input_size = train_data.shape[1]
-    hidden_layers = [10, 8] # Example
+    hidden_layers = [4, 3] # Example
     output_size = len(np.unique(target_array))
-    model = initialize_model(input_size, hidden_layers, output_size)
+    model = init_model(input_size, hidden_layers, output_size)
 
     # Train the model
-    epochs = 100
+    epochs = 30
     learning_rate = 0.01
-    trained_model = train(model, train_data, train_labels, epochs, learning_rate)
+    trained_model = train(model, train_data.T, train_labels, epochs, learning_rate)
 
     # Test the model
     accuracy = test(trained_model, test_data, test_labels)
