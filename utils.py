@@ -56,36 +56,29 @@ def activation_function(x, activation="relu"):
     if activation == "relu":
         return np.maximum(0, x)
     elif activation == "sigmoid":
-        return 1 / (1 + np.exp(-x))
+        return 1 / (1 + np.exp(-np.clip(x, -500, 500)))  # Clipping to avoid overflow
     elif activation == "tanh":
         return np.tanh(x)
     elif activation == 'softmax':
+        if np.any(np.isnan(x)) or np.any(np.isinf(x)):
+            raise ValueError("Input contains NaN or Inf values.")
         exp_z = np.exp(x - np.max(x))  # To improve numerical stability
         return exp_z / np.sum(exp_z, axis=0, keepdims=True)  # Normalize to sum to 1
     else:
         raise ValueError("Unsupported activation function.")
     
-def activation_derivative(A, activation="relu"):
-    """
-    Compute the derivative of the activation function (used in backpropagation).
-    
-    Args:
-        A (numpy.ndarray): The output of the activation function (A = f(Z)).
-        activation (str): The type of activation function (default is 'relu').
-    
-    Returns:
-        numpy.ndarray: The derivative of the activation function.
-    """
-    if activation == "relu":
-        return np.where(A > 0, 1, 0)  # ReLU derivative
-    elif activation == "sigmoid":
-        return A * (1 - A)  # Sigmoid derivative
-    elif activation == "softmax":
-        # For softmax, the derivative requires special handling
-        # We'll use the Jacobian matrix or simplified versions here
-        return A * (1 - A)  # For simplicity, we use this for now
+def activation_derivative(Z, activation="sigmoid"):
+    """ Compute the derivative of the activation function """
+    Z = np.clip(Z, -500, 500)
+
+    if activation == "sigmoid":
+        return Z * (1 - Z)
+    elif activation == "tanh":
+        return 1 - Z ** 2
+    elif activation == "relu":
+        return np.where(Z > 0, 1, 0)
     else:
-        raise ValueError(f"Unsupported activation: {activation}")
+        raise ValueError(f"Activation function {activation} not supported")
 
 def loss_function(predictions, targets, type):
     """
@@ -129,4 +122,7 @@ def calculate_accuracy(predictions, targets):
     correct = np.sum(predictions == targets)
     total = len(targets)
     return correct / total
+
+def one_hot_encode(labels, num_classes):
+    return np.eye(num_classes)[labels]
 
