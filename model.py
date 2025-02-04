@@ -1,5 +1,5 @@
 import numpy as np
-from utils import activation_function, loss_function, activation_derivative
+from utils import activation_function, loss_function, activation_derivative, generate_wt
 
 def compute_gradients(model, input_array, target_array, activations_dict):
     """
@@ -65,7 +65,7 @@ def init_model(input_size, hidden_layers, output_size):
         # Initialize weights and biases for each layer
         input_size = layer_sizes[i-1]
         output_size = layer_sizes[i]
-        weight_matrix = np.random.randn(input_size, output_size)  # Random weights
+        weight_matrix = generate_wt(input_size, output_size)  # Random weights
         bias_vector = np.random.randn(output_size)  # Random biases
         
         # Store weights and biases in the model dictionary
@@ -88,9 +88,6 @@ def forward_propagation(model, input_array, activations=None):
     """
     layer_count = len(model) // 2  
 
-    # if activations is None:
-    #     #ReLU for hidden layers, Softmax for output
-    #     activations = ["relu"] * (layer_count - 1) + ["softmax"]
     if activations is None:
         activations = ["sigmoid"] * (layer_count)
 
@@ -150,9 +147,3 @@ def back_propagation(model, gradients, learning_rate):
         model[f"W{i}"] -= learning_rate * dW  # Update weights
         model[f"b{i}"] -= learning_rate * db  # Update biases
     return 
-
-    
-    
-    pass
-
-    pass
