@@ -9,7 +9,7 @@ iris = load_iris()
 X = pd.DataFrame(data=iris.data, columns=iris.feature_names)
 y_labels = iris.target
 
-X = normalize_data(X).to_numpy()
+X = X.to_numpy()
 y = one_hot_encode(y_labels, num_classes=len(np.unique(y_labels)))
 
 # Initialize Weights and Biases
@@ -71,7 +71,7 @@ def predict(x, w1, b1, w2, b2):
     return np.argmax(out, axis=1)  # Get the class with highest probability
 
 # Train the neural network with bias terms
-acc, losses, w1, b1, w2, b2 = train(X, y, w1, b1, w2, b2, alpha=0.1, epochs=500)
+acc, losses, w1, b1, w2, b2 = train(X, y, w1, b1, w2, b2, alpha=0.1, epochs=200)
 
 # plotting accuracy
 plt.plot(acc)
