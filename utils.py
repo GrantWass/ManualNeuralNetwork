@@ -43,16 +43,41 @@ def activation_function(x, activation="sigmoid"):
     """
     if activation == "sigmoid":
         return 1 / (1 + np.exp(-x))
+    elif activation == "relu":
+        return np.maximum(0, x)
+    elif activation == "tanh":
+        return np.tanh(x)
+    elif activation == "softmax":
+        exp_x = np.exp(x - np.max(x, axis=-1, keepdims=True))  # Numerical stability
+        return exp_x / np.sum(exp_x, axis=-1, keepdims=True)
     else:
-        raise ValueError("Unsupported activation function.")
+        raise ValueError(f"Unsupported activation function: {activation}")
+
+def activation_derivative(Z, activation, Y=None):
+    """
+    Compute the derivative of the activation function.
     
-def activation_derivative(Z, activation="sigmoid"):
-    """ Compute the derivative of the activation function """
+    Args:
+        Z (numpy.ndarray): Input before activation.
+        activation (str): Type of activation function.
+    
+    Returns:
+        numpy.ndarray: Derivative of the activation function.
+    """
     if activation == "sigmoid":
         sigmoid = 1 / (1 + np.exp(-Z))
         return sigmoid * (1 - sigmoid)
+    elif activation == "relu":
+        return np.where(Z > 0, 1, 0)
+    elif activation == "tanh":
+        return 1 - np.tanh(Z) ** 2
+    elif activation == "softmax":
+        softmax = activation_function(Z, activation="softmax")
+        if Y is not None:
+            return softmax - Y  # Correct gradient for backpropagation
+        raise ValueError("Softmax derivative requires Y (one-hot labels).")
     else:
-        raise ValueError("Unsupported activation function")
+        raise ValueError(f"Unsupported activation function: {activation}")
 
 def loss_function(predictions, targets, type= "mse"):
     """

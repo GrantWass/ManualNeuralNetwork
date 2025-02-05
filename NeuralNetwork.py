@@ -36,12 +36,13 @@ class NeuralNetwork:
         """
         activations = {"A0": x}  # Store activations (input layer is A0)
         if activation_types is None:
-            activation_types = ["sigmoid"] * (len(self.weights))  # Default to sigmoid activation
+            activation_types = ["sigmoid"] * (len(self.weights) - 1) + ["softmax"] # Default to sigmoid activation
 
         for i in range(1, len(self.weights) + 1):
             activation_type = activation_types[i - 1]
             z = activations[f"A{i-1}"].dot(self.weights[f"W{i}"]) + self.biases[f"b{i}"]
             activations[f"Z{i}"] = z  # Store raw weighted sum before activation
+            activations[f"Z{i}_type"] = activation_type # Store activation type
             activations[f"A{i}"] = activation_function(z, activation=activation_type)  # Apply activation
 
         return activations
@@ -61,7 +62,10 @@ class NeuralNetwork:
         gradients = {}
 
         # Compute error at the output layer
-        dA = (activations[f"A{L}"] - y) * activation_derivative(activations[f"Z{L}"])
+        if activations[f"Z{L}_type"] == "softmax":
+            dA = activation_derivative(activations[f"Z{L}"], activation=activations[f"Z{L}_type"], Y=y)
+        else:
+            dA = (activations[f"A{L}"] - y) * activation_derivative(activations[f"Z{L}"], activation=activations[f"Z{L}_type"])
 
         # Backpropagate the error
         for i in reversed(range(1, L + 1)):
@@ -72,7 +76,7 @@ class NeuralNetwork:
 
             # Propagate the error backward to the previous layer
             if i > 1:
-                dA = dA.dot(self.weights[f"W{i}"].T) * activation_derivative(activations[f"Z{i-1}"])
+                dA = dA.dot(self.weights[f"W{i}"].T) * activation_derivative(activations[f"Z{i-1}"], activation=activations[f"Z{i-1}_type"])
 
         return gradients
 
@@ -143,6 +147,7 @@ class NeuralNetwork:
         return loss  
     
     def plot_metrics(self, acc, losses):
+
         plt.figure(figsize=(12, 5))
 
         plt.subplot(1, 2, 1)

@@ -19,4 +19,4 @@ architecture = [input_size] + hidden_layers + [output_size]
 model = NeuralNetwork(architecture)
 
 # Train model
-acc, losses = model.train(X, y, alpha=0.1, epochs=100)
+acc, losses = model.train(X, y, alpha=0.01, epochs=200)
