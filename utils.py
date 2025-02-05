@@ -48,8 +48,11 @@ def activation_function(x, activation="sigmoid"):
     
 def activation_derivative(Z, activation="sigmoid"):
     """ Compute the derivative of the activation function """
-
-    pass
+    if activation == "sigmoid":
+        sigmoid = 1 / (1 + np.exp(-Z))
+        return sigmoid * (1 - sigmoid)
+    else:
+        raise ValueError("Unsupported activation function")
 
 def loss_function(predictions, targets, type= "mse"):
     """
