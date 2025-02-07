@@ -56,3 +56,36 @@ class NeuralNetwork:
                     print(f"Epoch {epoch}, Loss: {loss}, MAE: {metric_value}")
         
         plot_metrics(losses, accuracies, epochs)
+
+    def train_step(self, X, Y, learning_rate, loss_type=None):
+        # Determine loss type based on the output activation
+        if loss_type is None:
+            loss_type = "mse" if self.layers[-1].activation == "linear" else "cross-entropy"
+
+        Y_hat = self.forward(X)
+        loss = loss_function(Y_hat, Y, loss_type)
+        self.backward(X, Y, Y_hat)
+        self.update_parameters(learning_rate)
+
+        metric_value = calculate_metric(Y_hat, Y, self.layers[-1].activation)
+        metric_name = "Accuracy" if self.layers[-1].activation == "softmax" else "MAE"
+
+        layer_details = []
+        for layer in self.layers:
+            layer_details.append({
+                "weights": layer.weights,
+                "biases": layer.biases,
+                "Z": layer.Z,
+                "A": layer.A,
+                "dW": layer.dW,
+                "db": layer.db,
+                "dZ": layer.dZ,
+                "activation": layer.activation
+            })
+
+        return {
+            "loss": loss,
+            metric_name.lower(): metric_value,
+            "layers": layer_details  
+        }
+

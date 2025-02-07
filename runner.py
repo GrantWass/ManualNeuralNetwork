@@ -15,7 +15,11 @@ def main():
 
     # Create and train the neural network
     nn = NeuralNetwork(layer_sizes, activations)
-    nn.train(X_train, Y_train, epochs=100, learning_rate=0.1)
+    # nn.train(X_train, Y_train, epochs=100, learning_rate=0.1)
+    epochs = 100
+    for epoch in range(epochs):
+        result = nn.train_step(X_train, Y_train, learning_rate=0.1)
+        print(f"Epoch {epoch}, Loss: {result['loss']}, {list(result.keys())[1]}: {list(result.values())[1]}")
 
     # Evaluate the network on the test set
     Y_test_hat = nn.forward(X_test)
