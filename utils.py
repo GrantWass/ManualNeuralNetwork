@@ -1,34 +1,7 @@
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 
-def split_data(data, target, train_ratio=0.8):
-    """
-    Split the data into training and testing sets.
-    
-    Args:
-        data (pandas.DataFrame): Input data (features).
-        target (numpy.ndarray or pandas.Series): Target labels.
-        train_ratio (float): Proportion of data to use for training.
-    
-    Returns:
-        tuple: 
-            - Training data (features) and labels
-            - Testing data (features) and labels
-    """
-    data = data.sample(frac=1, random_state=42).reset_index(drop=True)
-    target = target[data.index]
-
-    # Calculate the split index
-    train_size = int(train_ratio * len(data))
-    
-    # Split the data into training and testing sets
-    X_train = data.iloc[:train_size]
-    X_test = data.iloc[train_size:]
-    
-    y_train = target[:train_size]
-    y_test = target[train_size:]
-    
-    return X_train, X_test, y_train, y_test
 
 def activation_function(x, activation="sigmoid"):
     """
@@ -50,6 +23,8 @@ def activation_function(x, activation="sigmoid"):
     elif activation == "softmax":
         exp_x = np.exp(x - np.max(x, axis=-1, keepdims=True))  # Numerical stability
         return exp_x / np.sum(exp_x, axis=-1, keepdims=True)
+    elif activation == "linear":
+        return x
     else:
         raise ValueError(f"Unsupported activation function: {activation}")
 
@@ -64,8 +39,10 @@ def activation_derivative(Z, activation, Y=None):
     elif activation == "softmax":
         if Y is not None:
             softmax = activation_function(Z, activation="softmax")
-            return softmax - Y  # Correct gradient for backpropagation
+            return softmax - Y # Derivative of softmax with respect to cross-entropy loss
         raise ValueError("Softmax derivative requires Y (one-hot labels).")
+    elif activation == "linear": 
+        return np.ones_like(Z)  # Derivative of linear function is always 1
     else:
         raise ValueError(f"Unsupported activation function: {activation}")
 
@@ -93,23 +70,29 @@ def loss_function(predictions, targets, type= "cross-entropy"):
         raise ValueError("Unsupported loss function type.")
     
     
-def calculate_accuracy(predictions, targets):
+def calculate_metric(predictions, targets, activation):
     """
-    Calculate the accuracy of predictions compared to targets.
+    Calculate an appropriate evaluation metric based on the output activation.
     
     Args:
         predictions (numpy.ndarray): Predicted outputs.
         targets (numpy.ndarray): Actual target outputs.
+        activation (str): Activation function of the output layer.
     
     Returns:
-        float: Accuracy value.
+        float: Accuracy for classification, MAE for regression.
     """
-    y_pred = np.argmax(predictions, axis=1)
-    y_true = np.argmax(targets, axis=1)
-    return np.mean(y_pred == y_true) * 100
+    if activation == "softmax":  # Classification case
+        y_pred = np.argmax(predictions, axis=1)
+        y_true = np.argmax(targets, axis=1)
+        return np.mean(y_pred == y_true) * 100  # Accuracy in percentage
+    
+    elif activation == "linear":  # Regression case
+        return np.mean(np.abs(predictions - targets))  # Mean Absolute Error (MAE)
+    
+    else:
+        raise ValueError(f"Unsupported output activation: {activation}")
 
-def normalize_data(data):
-    return (data - data.min()) / (data.max() - data.min())
 
 def one_hot_encode(labels, num_classes):
     return np.eye(num_classes)[labels]
@@ -117,5 +100,29 @@ def one_hot_encode(labels, num_classes):
 def generate_wt(input, output, activation="sigmoid"):
     if activation == "relu":
         return np.random.randn(input, output) * np.sqrt(2 / input)  # He initialization
-    else:
+    elif activation in ["linear", "tanh", "sigmoid", "softmax"]:
         return np.random.randn(input, output) * np.sqrt(1 / input)  # Xavier initialization
+    else:
+        raise ValueError(f"Unsupported activation function: {activation}")
+
+    
+def plot_metrics(losses, accuracies, epochs):
+    plt.figure(figsize=(12, 5))
+
+    # Loss Plot
+    plt.subplot(1, 2, 1)
+    plt.plot(range(epochs), losses, label="Loss", color='red')
+    plt.xlabel("Epochs")
+    plt.ylabel("Loss")
+    plt.title("Training Loss")
+    plt.legend()
+
+    # Accuracy Plot
+    plt.subplot(1, 2, 2)
+    plt.plot(range(0, epochs, 2), accuracies, label="Accuracy", color='blue')
+    plt.xlabel("Epochs")
+    plt.ylabel("Accuracy (%)")
+    plt.title("Training Accuracy")
+    plt.legend()
+
+    plt.show()

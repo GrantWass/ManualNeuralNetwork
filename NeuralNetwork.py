@@ -1,183 +1,58 @@
-import numpy as np
-import matplotlib.pyplot as plt
-from utils import generate_wt, activation_function, loss_function, activation_derivative, calculate_accuracy
+from utils import loss_function, calculate_metric, plot_metrics
+from NeuronLayer import NeuronLayer
 
 class NeuralNetwork:
-    """
-    A simple feedforward neural network with customizable architecture, activation functions,
-    and training using backpropagation with gradient descent.
-    """
-    def __init__(self, architecture):
-        """
-        Initializes the neural network with the given architecture.
+    def __init__(self, layer_sizes, activations):
+        # Initialize the neural network with a list of layer sizes and activation functions
+        self.layers = []
+        for i in range(len(layer_sizes) - 1):
+            # Create each layer with the appropriate input and output sizes
+            self.layers.append(NeuronLayer(layer_sizes[i], layer_sizes[i+1], activations[i]))
 
-        Parameters:
-        - architecture (list): A list defining the number of neurons in each layer.
-                               Example: [4, 5, 3] (4 input neurons → 5 hidden → 3 output)
-        """
-        self.weights = {}  # Dictionary to store weight matrices
-        self.biases = {}   # Dictionary to store bias vectors
+    def forward(self, X):
+        A = X  # Start with the input data
+        for layer in self.layers:
+            A = layer.forward(A)  # Pass the output of one layer as input to the next
+        return A  # Return the final output of the network
 
-        for i in range(len(architecture) - 1):
-            self.weights[f"W{i+1}"] = generate_wt(architecture[i], architecture[i+1])  # Random weight initialization
-            self.biases[f"b{i+1}"] = np.zeros((1, architecture[i+1]))  # Initialize biases to zero
-
-    def forward_propagation(self, x, activation_types=None):
-        """
-        Performs forward propagation through the network.
+    def backward(self, X, Y, Y_hat):
+        # Perform the backward pass through all layers
+        m = X.shape[0]  # Number of samples in the batch
+        dA = Y_hat - Y  # Derivative of cross-entropy loss w.r.t. softmax output
         
-        Parameters:
-        - x (ndarray): Input data of shape (num_samples, input_dim)
-        - activation_types (list, optional): Activation function types for each layer.
-                                             Defaults to sigmoid for all layers if None.
-        
-        Returns:
-        - activations (dict): Stores activations and weighted inputs (Z values) for each layer.
-        """
-        activations = {"A0": x}  # Store activations (input layer is A0)
-        if activation_types is None:
-            activation_types = ["sigmoid"] * (len(self.weights) - 1) + ["softmax"]
+        # Iterate through layers in reverse order
+        for i in reversed(range(len(self.layers))):
+            prev_A = X if i == 0 else self.layers[i-1].A  # Input to the current layer
+            # Compute gradients for the current layer
+            # Includes Y for softmax layer
+            dA = self.layers[i].backward(dA, prev_A, Y if i == len(self.layers)-1 else None)
 
-        for i in range(1, len(self.weights) + 1):
-            activation_type = activation_types[i - 1]
-            z = activations[f"A{i-1}"].dot(self.weights[f"W{i}"]) + self.biases[f"b{i}"]
-            activations[f"Z{i}"] = z  # Store raw weighted sum before activation
-            activations[f"Z{i}_type"] = activation_type # Store activation type
-            activations[f"A{i}"] = activation_function(z, activation=activation_type)  # Apply activation
+    def update_parameters(self, learning_rate):
+        # Update the weights and biases of each layer using gradient descent
+        for layer in self.layers:
+            layer.weights -= learning_rate * layer.dW  # Update weights
+            layer.biases -= learning_rate * layer.db  # Update biases
 
-        return activations
+    def train(self, X, Y, epochs, learning_rate, type=None):
+        if type is None:
+            type = "mse" if self.layers[-1].activation == "linear" else "cross-entropy"
 
-    def back_propagation(self, y, activations):    
-        """
-        Performs backpropagation to compute gradients of weights and biases.
-        
-        Parameters:
-        - y (ndarray): True labels of shape (num_samples, output_dim)
-        - activations (dict): Dictionary containing forward propagation results.
-        
-        Returns:
-        - gradients (dict): Gradients of weights and biases for each layer.
-        """
-        L = len(self.weights)  # Number of layers
-        num_samples = y.shape[0]
-        gradients = {}
-
-        # Compute error at the output layer
-        if activations[f"Z{L}_type"] == "softmax":
-            dA = activations[f"A{L}"] - y
-        else:
-            dA = (activations[f"A{L}"] - y) * activation_derivative(activations[f"Z{L}"], activation=activations[f"Z{L}_type"])
-
-        # Backpropagate the error
-        for i in reversed(range(1, L + 1)):
-            dW = (1 / num_samples) * activations[f"A{i-1}"].T.dot(dA)  # Compute weight gradient
-            db = (1 / num_samples) * np.mean(dA, axis=0, keepdims=True)  # Compute bias gradient
-            gradients[f"dW{i}"] = dW
-            gradients[f"db{i}"] = db
-
-            # Propagate the error backward to the previous layer
-            if i > 1:
-                dA = dA.dot(self.weights[f"W{i}"].T) * activation_derivative(activations[f"Z{i-1}"], activation=activations[f"Z{i-1}_type"])
-
-        return gradients
-
-    def update_parameters(self, gradients, alpha):
-        """
-        Updates the weights and biases using the computed gradients.
-        
-        Parameters:
-        - gradients (dict): Dictionary containing gradients of weights and biases.
-        - alpha (float): Learning rate.
-        """
-
-        for i in range(1, len(self.weights) + 1):
-            self.weights[f"W{i}"] -= alpha * gradients[f"dW{i}"]  # Update weights
-            self.biases[f"b{i}"] -= alpha * gradients[f"db{i}"]  # Update biases
-
-    def train(self, x, y, alpha=0.01, epochs=100, type="sgd", batch_size=5):
-        """
-        Trains the neural network using gradient descent.
-        
-        Parameters:
-        - x (ndarray): Training data of shape (num_samples, input_dim)
-        - y (ndarray): One-hot encoded labels of shape (num_samples, output_dim)
-        - alpha (float): Learning rate.
-        - epochs (int): Number of training epochs.
-        
-        Returns:
-        - acc (list): List of accuracy values over epochs.
-        - losses (list): List of loss values over epochs.
-        """
-        acc = []
-        losses = []
+        losses = [] 
+        accuracies = [] 
         for epoch in range(epochs):
-            avg_loss = 0
+            Y_hat = self.forward(X)  # Forward pass
+            loss = loss_function(Y_hat, Y, type)  # Compute loss
+            self.backward(X, Y, Y_hat)  # Backward pass
+            self.update_parameters(learning_rate)  # Update parameters
 
-            if type == "sgd":
-                indices = np.arange(len(x))
-                np.random.shuffle(indices)
-                for i in range(0, len(x), batch_size):
-                    batch_indices = indices[i:i + batch_size]
-                    x_batch = x[batch_indices]
-                    y_batch = y[batch_indices]
-                    loss = self.training_cycle(x_batch, y_batch, alpha)
-                    avg_loss += loss
-                avg_loss /= (len(x) // batch_size)
-            else:
-                avg_loss = self.training_cycle(x, y, alpha)  
-            
-            predictions = self.forward_propagation(x)[f"A{len(self.weights)}"]
-            accuracy = calculate_accuracy(predictions, y)
-            acc.append(accuracy)
-            losses.append(avg_loss)
-            print(f"Epoch {epoch+1}: Loss={avg_loss:.5f}, Accuracy={acc[-1]:.2f}%")
-
-        self.plot_metrics(acc, losses)
-        return acc, losses
-    
-
-    def training_cycle(self, x, y, alpha):
-        """
-        Trains the neural network using gradient descent.
+            losses.append(loss) 
+            if epoch % 2 == 0:
+                metric_value = calculate_metric(Y_hat, Y, self.layers[-1].activation)
+                if self.layers[-1].activation == "softmax":
+                    accuracies.append(metric_value)
+                    print(f"Epoch {epoch}, Loss: {loss}, Accuracy: {metric_value}%")
+                else:  # Regression case
+                    accuracies.append(metric_value)
+                    print(f"Epoch {epoch}, Loss: {loss}, MAE: {metric_value}")
         
-        Parameters:
-        - x (ndarray): Training data of shape
-        - y (ndarray): One-hot encoded labels of shape
-        - alpha (float): Learning rate.
-
-        """
-        activations = self.forward_propagation(x)  
-        loss = loss_function(activations[f"A{len(self.weights)}"], y)  
-        gradients = self.back_propagation(y, activations)  
-        self.update_parameters(gradients, alpha)  
-        return loss  
-
-    def plot_metrics(self, acc, losses):
-
-        plt.figure(figsize=(12, 5))
-
-        plt.subplot(1, 2, 1)
-        plt.plot(acc, label='Accuracy')
-        plt.ylabel('Accuracy (%)')
-        plt.xlabel("Epochs")
-        plt.legend()
-
-        plt.subplot(1, 2, 2)
-        plt.plot(losses, label='Loss', color='red')
-        plt.ylabel('Loss')
-        plt.xlabel("Epochs")
-        plt.legend()
-
-        plt.show()
-
-# class NeuronLayer:
-#     def __init__(self, input_size, output_size):
-#         self.weights = generate_wt(input_size, output_size)
-#         self.biases = np.zeros((1, output_size))
-
-# class NeuralNetwork:
-#     def __init__(self, architecture):
-#         self.layers = []
-#         for i in range(len(architecture) - 1):
-#             self.layers.append(NeuronLayer(architecture[i], architecture[i+1]))
-    
+        plot_metrics(losses, accuracies, epochs)
