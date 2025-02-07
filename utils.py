@@ -54,16 +54,6 @@ def activation_function(x, activation="sigmoid"):
         raise ValueError(f"Unsupported activation function: {activation}")
 
 def activation_derivative(Z, activation, Y=None):
-    """
-    Compute the derivative of the activation function.
-    
-    Args:
-        Z (numpy.ndarray): Input before activation.
-        activation (str): Type of activation function.
-    
-    Returns:
-        numpy.ndarray: Derivative of the activation function.
-    """
     if activation == "sigmoid":
         sigmoid = 1 / (1 + np.exp(-Z))
         return sigmoid * (1 - sigmoid)
@@ -72,14 +62,14 @@ def activation_derivative(Z, activation, Y=None):
     elif activation == "tanh":
         return 1 - np.tanh(Z) ** 2
     elif activation == "softmax":
-        softmax = activation_function(Z, activation="softmax")
         if Y is not None:
+            softmax = activation_function(Z, activation="softmax")
             return softmax - Y  # Correct gradient for backpropagation
         raise ValueError("Softmax derivative requires Y (one-hot labels).")
     else:
         raise ValueError(f"Unsupported activation function: {activation}")
 
-def loss_function(predictions, targets, type= "mse"):
+def loss_function(predictions, targets, type= "cross-entropy"):
     """
     Calculate the loss between predictions and actual targets.
     
@@ -91,15 +81,18 @@ def loss_function(predictions, targets, type= "mse"):
     Returns:
         float: Loss value.
     """
-
-    if type == "mse":
+    if type == "cross-entropy":
+        epsilon = 1e-9  # Small value to prevent log(0)
+        predictions = np.clip(predictions, epsilon, 1 - epsilon)
+        return -np.sum(targets * np.log(predictions)) / len(targets)
+    elif type == "mse":
         errors = predictions - targets
         squared_errors = errors ** 2
         return np.mean(squared_errors)
     else:
         raise ValueError("Unsupported loss function type.")
-
-
+    
+    
 def calculate_accuracy(predictions, targets):
     """
     Calculate the accuracy of predictions compared to targets.
@@ -111,9 +104,9 @@ def calculate_accuracy(predictions, targets):
     Returns:
         float: Accuracy value.
     """
-    correct = np.sum(predictions == targets)
-    total = len(targets)
-    return correct / total
+    y_pred = np.argmax(predictions, axis=1)
+    y_true = np.argmax(targets, axis=1)
+    return np.mean(y_pred == y_true) * 100
 
 def normalize_data(data):
     return (data - data.min()) / (data.max() - data.min())
@@ -121,5 +114,8 @@ def normalize_data(data):
 def one_hot_encode(labels, num_classes):
     return np.eye(num_classes)[labels]
 
-def generate_wt(input, ouput):
-    return np.random.randn(input, ouput)
+def generate_wt(input, output, activation="sigmoid"):
+    if activation == "relu":
+        return np.random.randn(input, output) * np.sqrt(2 / input)  # He initialization
+    else:
+        return np.random.randn(input, output) * np.sqrt(1 / input)  # Xavier initialization

@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from utils import generate_wt, activation_function, loss_function, activation_derivative
+from utils import generate_wt, activation_function, loss_function, activation_derivative, calculate_accuracy
 
 class NeuralNetwork:
     """
@@ -36,7 +36,7 @@ class NeuralNetwork:
         """
         activations = {"A0": x}  # Store activations (input layer is A0)
         if activation_types is None:
-            activation_types = ["sigmoid"] * (len(self.weights) - 1) + ["softmax"] # Default to sigmoid activation
+            activation_types = ["sigmoid"] * (len(self.weights) - 1) + ["softmax"]
 
         for i in range(1, len(self.weights) + 1):
             activation_type = activation_types[i - 1]
@@ -59,18 +59,19 @@ class NeuralNetwork:
         - gradients (dict): Gradients of weights and biases for each layer.
         """
         L = len(self.weights)  # Number of layers
+        num_samples = y.shape[0]
         gradients = {}
 
         # Compute error at the output layer
         if activations[f"Z{L}_type"] == "softmax":
-            dA = activation_derivative(activations[f"Z{L}"], activation=activations[f"Z{L}_type"], Y=y)
+            dA = activations[f"A{L}"] - y
         else:
             dA = (activations[f"A{L}"] - y) * activation_derivative(activations[f"Z{L}"], activation=activations[f"Z{L}_type"])
 
         # Backpropagate the error
         for i in reversed(range(1, L + 1)):
-            dW = activations[f"A{i-1}"].T.dot(dA)  # Compute weight gradient
-            db = np.mean(dA, axis=0, keepdims=True)  # Compute bias gradient
+            dW = (1 / num_samples) * activations[f"A{i-1}"].T.dot(dA)  # Compute weight gradient
+            db = (1 / num_samples) * np.mean(dA, axis=0, keepdims=True)  # Compute bias gradient
             gradients[f"dW{i}"] = dW
             gradients[f"db{i}"] = db
 
@@ -88,11 +89,12 @@ class NeuralNetwork:
         - gradients (dict): Dictionary containing gradients of weights and biases.
         - alpha (float): Learning rate.
         """
+
         for i in range(1, len(self.weights) + 1):
             self.weights[f"W{i}"] -= alpha * gradients[f"dW{i}"]  # Update weights
             self.biases[f"b{i}"] -= alpha * gradients[f"db{i}"]  # Update biases
 
-    def train(self, x, y, alpha=0.01, epochs=100, type="sgd"):
+    def train(self, x, y, alpha=0.01, epochs=100, type="sgd", batch_size=5):
         """
         Trains the neural network using gradient descent.
         
@@ -106,27 +108,31 @@ class NeuralNetwork:
         - acc (list): List of accuracy values over epochs.
         - losses (list): List of loss values over epochs.
         """
-        acc, losses = [], []
-
+        acc = []
+        losses = []
         for epoch in range(epochs):
-            total_loss = 0
+            avg_loss = 0
 
             if type == "sgd":
-                for i in range(len(x)):
-                    loss = self.training_cycle(x[i].reshape(1, -1), y[i].reshape(1, -1), alpha)
-                    total_loss += loss  
-            else:  
-                loss = self.training_cycle(x, y, alpha)  
-                total_loss = loss  
-
-            # Compute average loss for the epoch
-            avg_loss = total_loss / len(x)
-            acc.append(100 - avg_loss * 100)  # Approximate accuracy (not a true accuracy metric)
+                indices = np.arange(len(x))
+                np.random.shuffle(indices)
+                for i in range(0, len(x), batch_size):
+                    batch_indices = indices[i:i + batch_size]
+                    x_batch = x[batch_indices]
+                    y_batch = y[batch_indices]
+                    loss = self.training_cycle(x_batch, y_batch, alpha)
+                    avg_loss += loss
+                avg_loss /= (len(x) // batch_size)
+            else:
+                avg_loss = self.training_cycle(x, y, alpha)  
+            
+            predictions = self.forward_propagation(x)[f"A{len(self.weights)}"]
+            accuracy = calculate_accuracy(predictions, y)
+            acc.append(accuracy)
             losses.append(avg_loss)
             print(f"Epoch {epoch+1}: Loss={avg_loss:.5f}, Accuracy={acc[-1]:.2f}%")
-        
-        self.plot_metrics(acc, losses)
 
+        self.plot_metrics(acc, losses)
         return acc, losses
     
 
@@ -145,7 +151,7 @@ class NeuralNetwork:
         gradients = self.back_propagation(y, activations)  
         self.update_parameters(gradients, alpha)  
         return loss  
-    
+
     def plot_metrics(self, acc, losses):
 
         plt.figure(figsize=(12, 5))
@@ -163,3 +169,15 @@ class NeuralNetwork:
         plt.legend()
 
         plt.show()
+
+# class NeuronLayer:
+#     def __init__(self, input_size, output_size):
+#         self.weights = generate_wt(input_size, output_size)
+#         self.biases = np.zeros((1, output_size))
+
+# class NeuralNetwork:
+#     def __init__(self, architecture):
+#         self.layers = []
+#         for i in range(len(architecture) - 1):
+#             self.layers.append(NeuronLayer(architecture[i], architecture[i+1]))
+    
