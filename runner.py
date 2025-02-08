@@ -7,11 +7,11 @@ def main():
     dataset = "iris"  # Options: "iris", "mnist", "california"
 
     # Load dataset
-    X_train, X_test, Y_train, Y_test, input_size, output_size = load_dataset(dataset)
+    X_train, X_test, Y_train, Y_test, input_size, output_size, output_activation = load_dataset(dataset)
 
     # Define the network architecture
     layer_sizes = [input_size, 4, 3, output_size]
-    activations = ["relu", "relu", "softmax"]  # Activations for each layer
+    activations = ["relu", "relu"] + [output_activation]  # Activations for each layer
 
     # Create and train the neural network
     nn = NeuralNetwork(layer_sizes, activations)

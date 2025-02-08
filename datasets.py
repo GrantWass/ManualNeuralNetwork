@@ -10,10 +10,10 @@ def load_dataset(dataset_name):
         return load_iris_dataset()
     elif dataset_name == "mnist":
         return load_mnist_dataset()
-    elif dataset_name == "california":
+    elif dataset_name == "california_housing":
         return load_california_housing_dataset()
     else:
-        raise ValueError("Unsupported dataset. Choose 'iris' or 'mnist'.")
+        raise ValueError("Unsupported dataset. Choose 'iris' or 'mnist' or 'california_housing.")
 
 def load_california_housing_dataset():
     """
@@ -35,7 +35,7 @@ def load_california_housing_dataset():
     X_train = scaler.fit_transform(X_train)
     X_test = scaler.transform(X_test)
     
-    return X_train, X_test, y_train, y_test, X_train.shape[1], y_train.shape[1]
+    return X_train, X_test, y_train, y_test, X_train.shape[1], y_train.shape[1], "linear"
 
 def load_mnist_dataset():
         (X_train, y_train), (X_test, y_test) = tf.keras.datasets.mnist.load_data()
@@ -48,7 +48,7 @@ def load_mnist_dataset():
         # One-hot encode the labels
         Y_train = tf.keras.utils.to_categorical(y_train, num_classes=10)
         Y_test = tf.keras.utils.to_categorical(y_test, num_classes=10)
-        return X_train, X_test, Y_train, Y_test, X_train.shape[1], Y_train.shape[1]
+        return X_train, X_test, Y_train, Y_test, X_train.shape[1], Y_train.shape[1], "softmax"
 
 def load_iris_dataset():
         iris = load_iris()
@@ -59,4 +59,4 @@ def load_iris_dataset():
         scaler = StandardScaler()
         X_train = scaler.fit_transform(X_train)
         X_test = scaler.transform(X_test)
-        return X_train, X_test, Y_train, Y_test, X_train.shape[1], Y_train.shape[1]
+        return X_train, X_test, Y_train, Y_test, X_train.shape[1], Y_train.shape[1], "softmax"

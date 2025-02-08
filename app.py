@@ -35,16 +35,17 @@ def init_model(request: InitModelRequest):
     session_id = str(uuid.uuid4())
 
     # Load dataset
-    X_train, _, Y_train, _, input_size, output_size = load_dataset(request.dataset)
+    X_train, _, Y_train, _, input_size, output_size, output_activation = load_dataset(request.dataset)
 
     layers = [input_size] + request.layer_sizes + [output_size]
 
     # Ensure activations length matches hidden + output layers
-    if len(request.activations) != len(request.layer_sizes) + 1:
-        return {"error": "Activations length must match number of layers - 1"}
+    if len(request.activations) != len(request.layer_sizes):
+        return {"error": "Activations length must match number of layers"}
 
+    activations = request.activations + [output_activation]
     # Initialize neural network
-    network = NeuralNetwork(layers, request.activations)
+    network = NeuralNetwork(layers, activations)
 
     # Store the model and dataset in the user's session
     user_sessions[session_id] = {
