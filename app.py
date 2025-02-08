@@ -3,54 +3,69 @@ from pydantic import BaseModel
 import numpy as np
 from NeuralNetwork import NeuralNetwork
 from datasets import load_dataset  # Assume a function to load the dataset
+import uuid
 
 app = FastAPI()
+
+user_sessions = {}
 
 @app.get("/")
 def home():
     return {"message": "Neural Network Visualization API is running!"}
 
-# Global variables
-network = None
-X_train, Y_train = None, None  # Will store dataset
-
 # ------------------ Model Initialization Request ------------------ #
 class InitModelRequest(BaseModel):
-    layer_sizes: list[int]  # List of layer sizes, including input & output
+    layer_sizes: list[int]  # List of layer sizes, excluding input & output
     activations: list[str]  # Activation function for each layer (except input)
     dataset: str  # Name of dataset (e.g., "california_housing", "mnist")
 
 @app.post("/init_model")
 def init_model(request: InitModelRequest):
-    global network, X_train, Y_train
+    # Generate a unique session ID for the user
+    session_id = str(uuid.uuid4())
 
     # Load dataset
     X_train, _, Y_train, _, input_size, output_size = load_dataset(request.dataset)
 
-    # Ensure first and last layers match dataset dimensions
-    if request.layer_sizes[0] != input_size or request.layer_sizes[-1] != output_size:
-        return {"error": "First layer size must match input size, and last layer must match output size"}
+    layers = [input_size] + request.layer_sizes + [output_size]
 
     # Ensure activations length matches hidden + output layers
-    if len(request.activations) != len(request.layer_sizes) - 1:
+    if len(request.activations) != len(request.layer_sizes) + 1:
         return {"error": "Activations length must match number of layers - 1"}
 
     # Initialize neural network
-    network = NeuralNetwork(request.layer_sizes, request.activations)
-    
-    return {"message": "Model initialized successfully", "layer_sizes": request.layer_sizes}
+    network = NeuralNetwork(layers, request.activations)
+
+    # Store the model and dataset in the user's session
+    user_sessions[session_id] = {
+        "network": network,
+        "X_train": X_train,
+        "Y_train": Y_train
+    }
+
+    return {
+        "message": "Model initialized successfully",
+        "session_id": session_id,
+        "layer_sizes": layers
+    }
 
 
 # ------------------ Training Request ------------------ #
 class TrainRequest(BaseModel):
+    session_id: str  # User's session ID
     learning_rate: float = 0.01
     epochs: int = 10
 
 @app.post("/train")
 def train_model(request: TrainRequest):
-    global network, X_train, Y_train
-    if network is None:
-        return {"error": "Model not initialized. Call /init_model first."}
+    # Retrieve the user's session
+    session = user_sessions.get(request.session_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail="Session not found. Call /init_model first.")
+
+    network = session["network"]
+    X_train = session["X_train"]
+    Y_train = session["Y_train"]
 
     training_results = []
 
@@ -65,3 +80,11 @@ def train_model(request: TrainRequest):
 
     return {"training_results": training_results}
 
+# ------------------ Clear Session ------------------ #
+@app.post("/clear_session")
+def clear_session(session_id: str):
+    if session_id in user_sessions:
+        del user_sessions[session_id]
+        return {"message": "Session cleared successfully"}
+    else:
+        raise HTTPException(status_code=404, detail="Session not found.")
