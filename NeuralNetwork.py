@@ -88,4 +88,9 @@ class NeuralNetwork:
             metric_name.lower(): metric_value,
             "layers": layer_details  
         }
+    
+    def to_dict(self):
+        return {
+            "layers": [layer.to_dict() for layer in self.layers]
+        }
 

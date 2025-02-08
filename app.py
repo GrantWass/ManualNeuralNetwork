@@ -4,8 +4,18 @@ import numpy as np
 from NeuralNetwork import NeuralNetwork
 from datasets import load_dataset  # Assume a function to load the dataset
 import uuid
+from fastapi import HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Adjust this to allow specific domains (e.g., ["http://localhost:3000"])
+    allow_credentials=True,
+    allow_methods=["*"],  # Allow all HTTP methods like GET, POST, OPTIONS
+    allow_headers=["*"],  # Allow all headers
+)
 
 user_sessions = {}
 
@@ -46,7 +56,8 @@ def init_model(request: InitModelRequest):
     return {
         "message": "Model initialized successfully",
         "session_id": session_id,
-        "layer_sizes": layers
+        "layer_sizes": layers,
+        "network" : network.to_dict()
     }
 
 

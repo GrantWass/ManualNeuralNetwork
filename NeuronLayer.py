@@ -42,3 +42,17 @@ class NeuronLayer:
         # Compute the gradient of the input to this layer (to be passed to the previous layer)
         dA_prev = np.dot(self.dZ, self.weights.T)
         return dA_prev
+    
+    def to_dict(self):
+        return {
+            "input_size": self.input_size,
+            "output_size": self.output_size,
+            "activation": self.activation,
+            "weights": self.weights.tolist(),
+            "biases": self.biases.tolist(),
+            "A": self.A.tolist() if self.A is not None else "",
+            "Z": self.Z.tolist() if self.Z is not None else "",
+            "dW": self.dW.tolist() if self.dW is not None else "",
+            "db": self.db.tolist() if self.db is not None else "",
+            "dZ": self.dZ.tolist() if self.dZ is not None else "",
+        }
