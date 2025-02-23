@@ -1,11 +1,11 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import numpy as np
 from NeuralNetwork import NeuralNetwork
 from datasets import load_dataset  # Assume a function to load the dataset
 import uuid
-from fastapi import HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from typing import List, Union
 
 app = FastAPI()
 
@@ -19,20 +19,21 @@ app.add_middleware(
 
 user_sessions = {}
 
-@app.get("/")
-def home():
-    return {"message": "Neural Network Visualization API is running!"}
-
 # ------------------ Model Initialization Request ------------------ #
 class InitModelRequest(BaseModel):
-    layer_sizes: list[int]  # List of layer sizes, excluding input & output
-    activations: list[str]  # Activation function for each layer (except input)
+    layer_sizes: List[int]  # List of layer sizes, excluding input & output
+    activations: List[str]  # Activation function for each layer (except input)
     dataset: str  # Name of dataset (e.g., "california_housing", "mnist")
 
-@app.post("/init_model")
+class InitModelResponse(BaseModel):
+    message: str
+    session_id: str
+    layer_sizes: List[int]
+    network: dict  # Serialized network as dictionary
+
+@app.post("/init_model", response_model=InitModelResponse)
 def init_model(request: InitModelRequest):
-    # Generate a unique session ID for the user
-    session_id = str(uuid.uuid4())
+    session_id = str(uuid.uuid4())  # Generate a unique session ID
 
     # Load dataset
     X_train, _, Y_train, _, input_size, output_size, output_activation = load_dataset(request.dataset)
@@ -41,25 +42,24 @@ def init_model(request: InitModelRequest):
 
     # Ensure activations length matches hidden + output layers
     if len(request.activations) != len(request.layer_sizes):
-        return {"error": "Activations length must match number of layers"}
+        raise HTTPException(status_code=400, detail="Activations length must match number of layers.")
 
     activations = request.activations + [output_activation]
-    # Initialize neural network
     network = NeuralNetwork(layers, activations)
 
     # Store the model and dataset in the user's session
     user_sessions[session_id] = {
         "network": network,
         "X_train": X_train,
-        "Y_train": Y_train
+        "Y_train": Y_train,
     }
 
-    return {
-        "message": "Model initialized successfully",
-        "session_id": session_id,
-        "layer_sizes": layers,
-        "network" : network.to_dict()
-    }
+    return InitModelResponse(
+        message="Model initialized successfully",
+        session_id=session_id,
+        layer_sizes=layers,
+        network=network.to_dict()  # Return serialized network
+    )
 
 
 # ------------------ Training Request ------------------ #
@@ -68,9 +68,28 @@ class TrainRequest(BaseModel):
     learning_rate: float = 0.01
     epochs: int = 10
 
-@app.post("/train")
+class LayerDetail(BaseModel):
+    weights: list
+    biases: list
+    Z: list
+    A: list
+    dW: list
+    db: list
+    dZ: list
+    activation: str
+
+class TrainResult(BaseModel):
+    epoch: int
+    loss: float
+    name: str  # Metric name (e.g., accuracy, mae)
+    metric: Union[float, str]  # Metric could be accuracy or mae
+    layers: List[LayerDetail]
+
+class TrainResponse(BaseModel):
+    training_results: List[TrainResult]
+
+@app.post("/train", response_model=TrainResponse)
 def train_model(request: TrainRequest):
-    # Retrieve the user's session
     session = user_sessions.get(request.session_id)
     if session is None:
         raise HTTPException(status_code=404, detail="Session not found. Call /init_model first.")
@@ -83,14 +102,34 @@ def train_model(request: TrainRequest):
 
     for epoch in range(request.epochs):
         result = network.train_step(X_train, Y_train, request.learning_rate)
-        training_results.append({
-            "epoch": epoch + 1,
-            "loss": result["loss"],
-            "metric": result.get("accuracy", result.get("mae")),
-            "layers": result["layers"]
-        })
 
-    return {"training_results": training_results}
+        layers = [
+            LayerDetail(
+                weights=layer["weights"].tolist(),
+                biases=layer["biases"].tolist(),
+                Z=layer["Z"].tolist(),
+                A=layer["A"].tolist(),
+                dW=layer["dW"].tolist(),
+                db=layer["db"].tolist(),
+                dZ=layer["dZ"].tolist(),
+                activation=layer["activation"]
+            ) for layer in result["layers"]
+        ]
+
+        metric_name = "accuracy" if "accuracy" in result else "mae"
+        metric_value = result.get("accuracy") if "accuracy" in result else result.get("mae")
+
+        # Add epoch results
+        training_results.append(TrainResult(
+            epoch=epoch + 1,
+            loss=result["loss"],
+            name=metric_name,
+            metric=metric_value,
+            layers=layers
+        ))
+
+    return TrainResponse(training_results=training_results)
+
 
 # ------------------ Clear Session ------------------ #
 @app.post("/clear_session")
