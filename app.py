@@ -80,6 +80,7 @@ class LayerDetail(BaseModel):
 
 class TrainResult(BaseModel):
     epoch: int
+    input: list
     loss: float
     name: str  # Metric name (e.g., accuracy, mae)
     metric: Union[float, str]  # Metric could be accuracy or mae
@@ -101,7 +102,7 @@ def train_model(request: TrainRequest):
     training_results = []
 
     for epoch in range(request.epochs):
-        result = network.train_step(X_train, Y_train, request.learning_rate)
+        result = network.train_step(X_train, Y_train, request.learning_rate) # TODO FIX LOSS FOR REGRESSION
 
         layers = [
             LayerDetail(
@@ -122,6 +123,7 @@ def train_model(request: TrainRequest):
         # Add epoch results
         training_results.append(TrainResult(
             epoch=epoch + 1,
+            input= X_train.tolist(),
             loss=result["loss"],
             name=metric_name,
             metric=metric_value,

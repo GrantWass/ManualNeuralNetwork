@@ -18,7 +18,7 @@ def main():
     # nn.train(X_train, Y_train, epochs=100, learning_rate=0.1)
     epochs = 10
     for epoch in range(epochs):
-        result = nn.train_step(X_train, Y_train, learning_rate=0.1)
+        result = nn.train_step(X_train, Y_train, learning_rate=0.1) # TODO FIX LOSS FOR REGRESSION
         print(f"Epoch {epoch}, Loss: {result['loss']}, {list(result.keys())[1]}: {list(result.values())[1]}")
 
     # Evaluate the network on the test set
