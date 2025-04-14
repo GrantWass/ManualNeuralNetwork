@@ -4,6 +4,7 @@ from sklearn.preprocessing import StandardScaler
 import tensorflow as tf
 from sklearn.datasets import load_iris
 from utils import one_hot_encode
+import numpy as np
 
 def load_dataset(dataset_name):
     if dataset_name == "iris":
@@ -16,9 +17,6 @@ def load_dataset(dataset_name):
         raise ValueError("Unsupported dataset. Choose 'iris' or 'mnist' or 'california_housing.")
 
 def load_california_housing_dataset():
-    """
-    Load the California Housing Dataset.
-    """
     # Fetch the dataset
     california = fetch_california_housing()
     X = california.data  # Input features
@@ -29,13 +27,15 @@ def load_california_housing_dataset():
     
     # Split into training and testing sets
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+    original_train_data = np.hstack((X_train, y_train)).tolist()
     
     # Standardize the input features
     scaler = StandardScaler()
     X_train = scaler.fit_transform(X_train)
     X_test = scaler.transform(X_test)
     
-    return X_train, X_test, y_train, y_test, X_train.shape[1], y_train.shape[1], "linear"
+    return X_train, X_test, y_train, y_test, X_train.shape[1], y_train.shape[1], "linear", original_train_data
 
 def load_mnist_dataset():
         (X_train, y_train), (X_test, y_test) = tf.keras.datasets.mnist.load_data()
@@ -48,7 +48,10 @@ def load_mnist_dataset():
         # One-hot encode the labels
         Y_train = tf.keras.utils.to_categorical(y_train, num_classes=10)
         Y_test = tf.keras.utils.to_categorical(y_test, num_classes=10)
-        return X_train, X_test, Y_train, Y_test, X_train.shape[1], Y_train.shape[1], "softmax"
+
+        original_train_data = np.hstack((X_train, Y_train)).tolist()
+
+        return X_train, X_test, Y_train, Y_test, X_train.shape[1], Y_train.shape[1], "softmax", original_train_data
 
 def load_iris_dataset():
         iris = load_iris()
@@ -56,7 +59,10 @@ def load_iris_dataset():
         y = iris.target
         Y = one_hot_encode(y, num_classes=3)
         X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2, random_state=42)
+
+        original_train_data = np.hstack((X_train, Y_train)).tolist()
+
         scaler = StandardScaler()
         X_train = scaler.fit_transform(X_train)
         X_test = scaler.transform(X_test)
-        return X_train, X_test, Y_train, Y_test, X_train.shape[1], Y_train.shape[1], "softmax"
+        return X_train, X_test, Y_train, Y_test, X_train.shape[1], Y_train.shape[1], "softmax", original_train_data

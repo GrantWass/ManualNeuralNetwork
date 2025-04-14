@@ -29,6 +29,7 @@ class InitModelResponse(BaseModel):
     message: str
     session_id: str
     layer_sizes: List[int]
+    original_train_data: list
     network: dict  # Serialized network as dictionary
 
 @app.post("/init_model", response_model=InitModelResponse)
@@ -36,7 +37,7 @@ def init_model(request: InitModelRequest):
     session_id = str(uuid.uuid4())  # Generate a unique session ID
 
     # Load dataset
-    X_train, _, Y_train, _, input_size, output_size, output_activation = load_dataset(request.dataset)
+    X_train, _, Y_train, _, input_size, output_size, output_activation, original_train_data = load_dataset(request.dataset)
 
     layers = [input_size] + request.layer_sizes + [output_size]
 
@@ -58,6 +59,7 @@ def init_model(request: InitModelRequest):
         message="Model initialized successfully",
         session_id=session_id,
         layer_sizes=layers,
+        original_train_data=original_train_data,
         network=network.to_dict()  # Return serialized network
     )
 
