@@ -17,15 +17,15 @@ class NeuralNetwork:
 
     def backward(self, X, Y, Y_hat):
         # Perform the backward pass through all layers
-        m = X.shape[0]  # Number of samples in the batch
         dA = Y_hat - Y  # Derivative of cross-entropy loss w.r.t. softmax output
         
         # Iterate through layers in reverse order
         for i in reversed(range(len(self.layers))):
             prev_A = X if i == 0 else self.layers[i-1].A  # Input to the current layer
+
             # Compute gradients for the current layer
-            # Includes Y for softmax layer
-            dA = self.layers[i].backward(dA, prev_A, Y if i == len(self.layers)-1 else None)
+            dA = self.layers[i].backward(dA, prev_A)
+
 
     def update_parameters(self, learning_rate):
         # Update the weights and biases of each layer using gradient descent

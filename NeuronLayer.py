@@ -18,6 +18,7 @@ class NeuronLayer:
         self.dW = None  # Gradient of weights
         self.db = None  # Gradient of biases
         self.dZ = None  # Gradient of Z
+        self.dA = None 
 
     def forward(self, X):
         # Perform the forward pass: compute linear output Z and activated output A
@@ -25,13 +26,13 @@ class NeuronLayer:
         self.A = activation_function(self.Z, self.activation)  # Apply activation function
         return self.A  # Return the activated output
 
-    def backward(self, dA, prev_A, Y=None):
+    def backward(self, dA, prev_A):
         # Perform the backward pass: compute gradients of weights, biases, and input
+
+        # Compute dZ depending on activation
         if self.activation == "softmax":
-            # Special case for softmax activation (used in the output layer)
-            self.dZ = activation_derivative(self.Z, self.activation, Y)
+            self.dZ = dA  # Already handled by loss function
         else:
-            # Compute dZ using the derivative of the activation function
             self.dZ = dA * activation_derivative(self.Z, self.activation)
         
         # Compute gradients of weights and biases
@@ -55,4 +56,5 @@ class NeuronLayer:
             "dW": self.dW.tolist() if self.dW is not None else "",
             "db": self.db.tolist() if self.db is not None else "",
             "dZ": self.dZ.tolist() if self.dZ is not None else "",
+            "dA": self.dA.tolist() if self.dA is not None else "",
         }
