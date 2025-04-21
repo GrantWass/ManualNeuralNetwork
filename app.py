@@ -59,7 +59,7 @@ def init_model(request: InitModelRequest):
         message="Model initialized successfully",
         session_id=session_id,
         layer_sizes=layers,
-        original_train_data=original_train_data,
+        original_train_data=original_train_data[:30],
         network=network.to_dict()  # Return serialized network
     )
 
@@ -104,28 +104,43 @@ def train_model(request: TrainRequest):
     training_results = []
 
     for epoch in range(request.epochs):
-        result = network.train_step(X_train, Y_train, request.learning_rate) # TODO FIX LOSS FOR REGRESSION
+        result = network.train_step(X_train, Y_train, request.learning_rate)
 
-        layers = [
-            LayerDetail(
-                weights=layer["weights"].tolist(),
-                biases=layer["biases"].tolist(),
-                Z=layer["Z"].tolist(),
-                A=layer["A"].tolist(),
-                dW=layer["dW"].tolist(),
-                db=layer["db"].tolist(),
-                dZ=layer["dZ"].tolist(),
-                activation=layer["activation"]
-            ) for layer in result["layers"]
-        ]
+        # Full detail for the last epoch
+        if epoch == request.epochs - 1:
+            layers = [
+                LayerDetail(
+                    activation=layer["activation"],
+                    Z=layer["Z"][:30].astype(np.float32).tolist(),
+                    A=layer["A"][:30].astype(np.float32).tolist(),
+                    dW=layer["dW"].astype(np.float32).tolist(),
+                    db=layer["db"].astype(np.float32).tolist(),
+                    dZ=layer["dZ"][:30].astype(np.float32).tolist(),
+                    weights=layer["weights"].astype(np.float32).tolist(),
+                    biases=layer["biases"].astype(np.float32).tolist(),
+                ) for layer in result["layers"]
+            ]
+        else:
+            # Only return weights & biases for earlier epochs
+            layers = [
+                LayerDetail(
+                    weights=layer["weights"].astype(np.float32).tolist(),
+                    biases=layer["biases"].astype(np.float32).tolist(),
+                    Z=[],
+                    A=[],
+                    dW=[],
+                    db=[],
+                    dZ=[],
+                    activation=layer["activation"]
+                ) for layer in result["layers"]
+            ]
 
         metric_name = "accuracy" if "accuracy" in result else "mae"
         metric_value = result.get("accuracy") if "accuracy" in result else result.get("mae")
 
-        # Add epoch results
         training_results.append(TrainResult(
             epoch=epoch + 1,
-            input= X_train.tolist(),
+            input=X_train[:30].tolist() if epoch == request.epochs - 1 else [],
             loss=result["loss"],
             name=metric_name,
             metric=metric_value,
