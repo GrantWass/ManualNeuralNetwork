@@ -2,9 +2,16 @@ from utils import loss_function, calculate_metric, plot_metrics
 from NeuronLayer import NeuronLayer
 
 class NeuralNetwork:
-    def __init__(self, layer_sizes, activations):
+    def __init__(self, layer_sizes, activations, optimizer):
         # Initialize the neural network with a list of layer sizes and activation functions
         self.layers = []
+        if optimizer == "batch":
+            from optimizer import Batch
+            self.optimizer = Batch()
+        elif optimizer == "adam":
+            from optimizer import Adam
+            self.optimizer = Adam()
+
         for i in range(len(layer_sizes) - 1):
             # Create each layer with the appropriate input and output sizes
             self.layers.append(NeuronLayer(layer_sizes[i], layer_sizes[i+1], activations[i]))
@@ -26,12 +33,11 @@ class NeuralNetwork:
             # Compute gradients for the current layer
             dA = self.layers[i].backward(dA, prev_A)
 
-
     def update_parameters(self, learning_rate):
         # Update the weights and biases of each layer using gradient descent
         for layer in self.layers:
-            layer.weights -= learning_rate * layer.dW  # Update weights
-            layer.biases -= learning_rate * layer.db  # Update biases
+            self.optimizer.step(layer, learning_rate)
+
 
     def train(self, X, Y, epochs, learning_rate, type=None):
         if type is None:

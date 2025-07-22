@@ -46,7 +46,7 @@ def init_model(request: InitModelRequest):
         raise HTTPException(status_code=400, detail="Activations length must match number of layers.")
 
     activations = request.activations + [output_activation]
-    network = NeuralNetwork(layers, activations)
+    network = NeuralNetwork(layers, activations, optimizer="batch")
 
     # Store the model and dataset in the user's session
     user_sessions[session_id] = {
