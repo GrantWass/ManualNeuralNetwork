@@ -23,7 +23,7 @@ user_sessions = {}
 class InitModelRequest(BaseModel):
     layer_sizes: List[int]  # List of layer sizes, excluding input & output
     activations: List[str]  # Activation function for each layer (except input)
-    dataset: str  # Name of dataset (e.g., "california_housing", "mnist")
+    dataset: str  # Name of dataset (e.g., "iris", "auto_mpg")
 
 class InitModelResponse(BaseModel):
     message: str

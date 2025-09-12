@@ -22,9 +22,17 @@ class NeuralNetwork:
             A = layer.forward(A)  # Pass the output of one layer as input to the next
         return A  # Return the final output of the network
 
-    def backward(self, X, Y, Y_hat):
+    def backward(self, X, Y, Y_hat, loss_type="mse"):
         # Perform the backward pass through all layers
-        dA = Y_hat - Y  # Derivative of cross-entropy loss w.r.t. softmax output
+        m = Y.shape[0]  # Number of samples
+        
+        # Compute the initial gradient based on loss type
+        if loss_type == "mse":
+            dA = 2 * (Y_hat - Y) / m  # Derivative of MSE loss w.r.t. linear output
+        elif loss_type == "cross-entropy":
+            dA = Y_hat - Y  # Derivative of cross-entropy loss w.r.t. softmax output
+        else:
+            raise ValueError(f"Unsupported loss type: {loss_type}")
         
         # Iterate through layers in reverse order
         for i in reversed(range(len(self.layers))):
@@ -48,7 +56,7 @@ class NeuralNetwork:
         for epoch in range(epochs):
             Y_hat = self.forward(X)  # Forward pass
             loss = loss_function(Y_hat, Y, type)  # Compute loss
-            self.backward(X, Y, Y_hat)  # Backward pass
+            self.backward(X, Y, Y_hat, type)  # Backward pass
             self.update_parameters(learning_rate)  # Update parameters
 
             losses.append(loss) 
@@ -70,7 +78,7 @@ class NeuralNetwork:
 
         Y_hat = self.forward(X)
         loss = loss_function(Y_hat, Y, loss_type)
-        self.backward(X, Y, Y_hat)
+        self.backward(X, Y, Y_hat, loss_type)
         self.update_parameters(learning_rate)
 
         metric_value = calculate_metric(Y_hat, Y, self.layers[-1].activation)
