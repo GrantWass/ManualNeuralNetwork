@@ -1,4 +1,4 @@
-from utils import loss_function, calculate_metric, plot_metrics
+from utils import loss_function, calculate_metric
 from NeuronLayer import NeuronLayer
 
 class NeuralNetwork:
@@ -69,7 +69,7 @@ class NeuralNetwork:
                     accuracies.append(metric_value)
                     print(f"Epoch {epoch}, Loss: {loss}, MAE: {metric_value}")
         
-        plot_metrics(losses, accuracies, epochs)
+        # plot_metrics(losses, accuracies, epochs)
 
     def train_step(self, X, Y, learning_rate, loss_type=None):
         # Determine loss type based on the output activation

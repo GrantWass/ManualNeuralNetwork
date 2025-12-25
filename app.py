@@ -6,6 +6,7 @@ from datasets import load_dataset  # Assume a function to load the dataset
 import uuid
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Union
+from mangum import Mangum
 
 app = FastAPI()
 
@@ -158,3 +159,7 @@ def clear_session(session_id: str):
         return {"message": "Session cleared successfully"}
     else:
         raise HTTPException(status_code=404, detail="Session not found.")
+
+
+# AWS Lambda entrypoint (API Gateway / ALB compatible)
+lambda_handler = Mangum(app)

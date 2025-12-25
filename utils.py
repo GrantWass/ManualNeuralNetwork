@@ -1,6 +1,5 @@
-import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 
 def activation_function(x, activation="sigmoid"):
@@ -105,24 +104,60 @@ def generate_wt(input, output, activation="sigmoid"):
     else:
         raise ValueError(f"Unsupported activation function: {activation}")
 
+def train_test_split_np(X, y, test_size=0.2, random_state=42, shuffle=True):
+    rng = np.random.default_rng(seed=random_state)
+    n = X.shape[0]
+    indices = np.arange(n)
+    if shuffle:
+        rng.shuffle(indices)
+    split = int(n * (1 - test_size))
+    train_idx = indices[:split]
+    test_idx = indices[split:]
+    X_train, X_test = X[train_idx], X[test_idx]
+    if y is None:
+        return X_train, X_test
+    y_train, y_test = y[train_idx], y[test_idx]
+    return X_train, X_test, y_train, y_test
+
+class StandardScalerNP:
+    def __init__(self):
+        self.mean_ = None
+        self.scale_ = None
+
+    def fit(self, X):
+        self.mean_ = np.mean(X, axis=0)
+        std = np.std(X, axis=0)
+        # Prevent division by zero
+        self.scale_ = np.where(std == 0, 1.0, std)
+        return self
+
+    def transform(self, X):
+        if self.mean_ is None or self.scale_ is None:
+            raise ValueError("StandardScalerNP must be fitted before transform.")
+        return (X - self.mean_) / self.scale_
+
+    def fit_transform(self, X):
+        self.fit(X)
+        return self.transform(X)
+
     
-def plot_metrics(losses, accuracies, epochs):
-    plt.figure(figsize=(12, 5))
+# def plot_metrics(losses, accuracies, epochs):
+#     plt.figure(figsize=(12, 5))
 
-    # Loss Plot
-    plt.subplot(1, 2, 1)
-    plt.plot(range(epochs), losses, label="Loss", color='red')
-    plt.xlabel("Epochs")
-    plt.ylabel("Loss")
-    plt.title("Training Loss")
-    plt.legend()
+#     # Loss Plot
+#     plt.subplot(1, 2, 1)
+#     plt.plot(range(epochs), losses, label="Loss", color='red')
+#     plt.xlabel("Epochs")
+#     plt.ylabel("Loss")
+#     plt.title("Training Loss")
+#     plt.legend()
 
-    # Accuracy Plot
-    plt.subplot(1, 2, 2)
-    plt.plot(range(0, epochs, 2), accuracies, label="Accuracy", color='blue')
-    plt.xlabel("Epochs")
-    plt.ylabel("Accuracy (%)")
-    plt.title("Training Accuracy")
-    plt.legend()
+#     # Accuracy Plot
+#     plt.subplot(1, 2, 2)
+#     plt.plot(range(0, epochs, 2), accuracies, label="Accuracy", color='blue')
+#     plt.xlabel("Epochs")
+#     plt.ylabel("Accuracy (%)")
+#     plt.title("Training Accuracy")
+#     plt.legend()
 
-    plt.show()
+#     plt.show()

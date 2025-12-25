@@ -1,0 +1,4 @@
+# Exclude helper scripts from Docker build context
+scripts/
+runner.py
+docker.txt

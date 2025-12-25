@@ -1,9 +1,7 @@
 fastapi
 uvicorn[standard]
 pydantic
-numpy
-scikit-learn
-pandas
-matplotlib
-tensorflow
+numpy==1.26.4
 python-multipart
+mangum
+requests
